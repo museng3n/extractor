@@ -52,6 +52,10 @@ class TelegramSignalExtractor:
             
         channel_signals = []
         
+        # Add maximum age filter
+        MAX_SIGNAL_AGE_HOURS = 24  # Only process signals from last 24 hours
+        current_time = datetime.now(timezone.utc)
+        
         # Convert date strings to datetime objects if provided
         start_datetime = None
         end_datetime = None
@@ -93,6 +97,12 @@ class TelegramSignalExtractor:
                 if not message.message:
                     continue
                 
+                # Check message age
+                message_age = current_time - message.date
+                if message_age.total_seconds() > (MAX_SIGNAL_AGE_HOURS * 3600):
+                    print(f"Skipping old message from {message.date} (older than {MAX_SIGNAL_AGE_HOURS} hours)")
+                    continue
+                
                 # Print message date for debugging
                 print(f"Processing message at {message.date}: {message.message[:50]}...")
                 
@@ -117,6 +127,7 @@ class TelegramSignalExtractor:
                     signal['timestamp'] = message.date.isoformat()
                     signal['message_id'] = message.id
                     signal['channel_id'] = channel_id
+                    signal['message_age_hours'] = message_age.total_seconds() / 3600
                     channel_signals.append(signal)
                 else:
                     print(f"Message does not match signal pattern")
@@ -131,7 +142,7 @@ class TelegramSignalExtractor:
             print(f"Error extracting signals from channel {channel_id}: {e}")
             
         return []
-        
+         
     def parse_signal_message(self, message_text):
         """
         Parse a message to extract trading signal information
